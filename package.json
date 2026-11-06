@@ -1,0 +1,53 @@
+{
+  "name": "dsh-github-radar",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Right-sidebar GitHub trending panel for DeepSeek Harness: three curated lists, one line of purpose per repo, click to open.",
+  "author": "fengboy",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/goodboys155/dsh-github-radar.git"
+  },
+  "homepage": "https://github.com/goodboys155/dsh-github-radar#readme",
+  "bugs": {
+    "url": "https://github.com/goodboys155/dsh-github-radar/issues"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "dsh",
+    "deepseek-harness",
+    "github",
+    "trending",
+    "discovery",
+    "sidebar"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ]
+    }
+  }
+}
