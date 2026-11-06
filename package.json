@@ -1,8 +1,8 @@
 {
   "name": "dsh-github-radar",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
-  "description": "Right-sidebar GitHub trending panel for DeepSeek Harness: three curated lists, one line of purpose per repo, click to open.",
+  "description": "Right-sidebar GitHub panel for DeepSeek Harness: four rising-repo lists ranked by star velocity, plus keyword search. No GitHub login required.",
   "author": "fengboy",
   "license": "MIT",
   "repository": {
