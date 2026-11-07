@@ -1,113 +1,109 @@
-# GitHub Radar for DeepSeek Harness
+# GitHub Radar · DeepSeek Harness 插件
 
-A right-sidebar panel that shows what is actually taking off on GitHub: four lists ranked by **star velocity**, plus keyword search. One click opens the repository.
+**中文** | [English](README.en.md)
 
-右侧栏面板，打开即显示 GitHub 上真正在起量的项目：四个档位按**星标增速**排序，外加关键词搜索。点击一行直达仓库。
+右侧栏面板，打开就显示 GitHub 上真正在起量的项目：四个榜单按**星标增速**排序，外加关键词搜索。点一行直达仓库。
 
-![screenshot](assets/screenshot.png)
+![截图](assets/screenshot.png)
 
-## No GitHub account needed / 不需要 GitHub 账号
+## 不需要 GitHub 账号
 
-This plugin **never asks you to log in**. It reads GitHub's public Search API anonymously — no token, no OAuth, no account, no credentials of any kind. Nothing about your GitHub identity is read, stored, or sent anywhere.
+本插件**从不要求你登录**。它以匿名身份读取 GitHub 公开的 Search API —— 不需要 token、不需要 OAuth、不读任何账号或凭据，也不会读取、保存或上传任何与你 GitHub 身份有关的东西。
 
-It calls `api.github.com` and nothing else. There is no telemetry.
+它只访问 `api.github.com`，别的一概不碰，没有遥测。
 
-本插件**不会要求你登录 GitHub**。它以匿名身份读取 GitHub 公开的 Search API —— 不需要 token、不需要 OAuth、不读取任何账号或凭据。它只访问 `api.github.com`，没有遥测。
+没有代理、网络本身能直连 GitHub 时，开箱即用。连不上时会发生什么，见[网络行为](#网络行为)。
 
-If you have no proxy and your network can reach GitHub directly, it just works. See [Network behaviour](#network-behaviour) for what happens when it cannot.
+## 四个榜单
 
-## What it does
-
-Four lists, each the top 30:
-
-| List | Query | Ranked by |
+| 榜单 | 查询条件 | 排序方式 |
 | --- | --- | --- |
-| **今日 Today** | created within 2 days, 3+ stars | stars per day |
-| **本周 This week** | created within 7 days, 20+ stars | stars per day |
-| **本月 This month** | created within 30 days, 100+ stars | stars per day |
-| **常青 Giants** | 20k+ stars, pushed within 30 days | total stars |
+| **今日** | 2 天内新建，≥3 星 | 每天涨星数 |
+| **本周** | 7 天内新建，≥20 星 | 每天涨星数 |
+| **本月** | 30 天内新建，≥100 星 | 每天涨星数 |
+| **常青** | ≥2 万星，30 天内有推送 | 星标总数 |
 
-**Why stars per day, not total stars.** A repository that gained 2,000 stars in three days is more worth your attention than one that gained 3,000 in six months, but the second always wins a total-stars sort. The three rising lists therefore fetch a pool of candidates and re-rank locally by `stars ÷ days since creation`. Each row shows that rate — `+460/day` — next to the language. For the Giants list total stars is the right measure, so it stays.
+**为什么按「星/天」而不是总星数。** 三天涨 2000 星的项目，比半年涨 3000 星的更值得看，但后者在"按总星数排序"里永远压在前面。所以前三个榜先拉一批候选，再在本地按 `星数 ÷ 建仓天数` 重排；每行在语言后面直接显示这个速率，例如 `+460/天`。「常青」榜衡量的是体量，总星数才是对的指标，保持不变。
 
-**Search.** Type a keyword and the panel queries GitHub directly. Matching is GitHub's own: the term is matched against repository name, description, README and topics, so both `rust` and `中文` work. Results are sorted by stars. Space-separated terms are ANDed by GitHub, which is why `awesome list` returns 23k results rather than 2M.
+**搜索。** 输入关键词即直查 GitHub，匹配规则就是 GitHub 自己的：名字、描述、README、话题全都参与，所以 `rust` 和 `中文` 都能搜。结果按星数排序。空格分隔的多个词由 GitHub 做 AND 组合，这就是 `awesome list` 只有 2.3 万条结果、而不是 200 万条的原因。
 
-Two details that matter in practice:
+两个实际体验上的细节：
 
-- **Debounced 500 ms**, so typing does not fire a request per keystroke.
-- **IME-aware.** While a Chinese/Japanese/Korean input method is composing (拼音 not yet committed), no request is sent. It fires on `compositionend`, so typing 「中文」 costs one request, not one per pinyin keystroke.
+- **防抖 500 毫秒**，不会每敲一个字母就发一次请求。
+- **识别输入法组词**：中日韩输入法还在组词（拼音没上屏）时不发请求，等 `compositionend` 才发。所以打「中文」是 1 次请求，不是每个拼音字母 1 次。
 
-## Install
+## 安装
 
 ```sh
 dsh plugin --profile web add github:goodboys155/dsh-github-radar
 ```
 
-Then restart DSH. The tab appears in the **right** sidebar as 「雷达」/「Radar」.
+装完重启 DSH。右侧栏会出现「雷达」标签页。
 
-Restart is required: DSH scans client plugins at startup only. Editing files on disk does not hot-reload the browser half.
+必须重启：DSH 只在启动时扫描客户端插件，改磁盘文件不会热重载浏览器那一半。
 
-## Network behaviour
+## 网络行为
 
-Outbound requests go **direct first**, using Node's global `fetch` (undici), which keeps a connection pool and reuses TLS sessions — an order of magnitude faster than a hand-rolled `https.request` per call.
+出站请求**优先直连**，用 Node 自带的全局 `fetch`（undici）—— 它维持连接池、复用 TLS 会话，比每次调用现搓 `https.request` 快一个数量级。
 
-If direct fails, it probes these local proxy ports and only tries the ones actually listening:
+直连失败时，才会去探测下面这些本机代理端口，并且只试真正在监听的那些：
 
 ```
-127.0.0.1:10808   (v2rayN default)
+127.0.0.1:10808   （v2rayN 默认）
 127.0.0.1:10809
-127.0.0.1:7890    (Clash default)
+127.0.0.1:7890    （Clash 默认）
 127.0.0.1:7897
 127.0.0.1:1080
 ```
 
-That probe costs a few milliseconds per port. **If direct fails and no proxy is listening, you get an error in about 6 seconds** — not after trying five ports at 15 seconds each. A machine without a proxy is a normal, supported configuration; it just reports the failure quickly instead of hanging.
+每个端口探测只花几毫秒。**直连失败且没有代理在听时，大约 6 秒就报错** —— 而不是拿五个端口各等 15 秒。没有代理的机器是正常且受支持的配置，只是它会快速报失败，而不是一直挂着。
 
-The first proxy that answers is remembered for the rest of the process.
+第一个响应成功的代理会被记住，本次进程内一直用它。
 
-## Data source and caching
+## 数据源与缓存
 
-[GitHub Search REST API](https://docs.github.com/en/rest/search/search), `repositories` endpoint, unauthenticated.
+[GitHub Search REST API](https://docs.github.com/en/rest/search/search) 的 `repositories` 端点，匿名调用。
 
-Unauthenticated search allows 10 requests per minute. The plugin is sized well under that:
+匿名搜索的限额是每分钟 10 次，插件的用量远低于这个数：
 
-- **30 minutes** in memory and on disk for the four lists (`$DSH_HOME/github-radar/trending-<period>.json`)
-- **5 minutes** in memory for a given search keyword
+- 四个榜单：内存 + 磁盘缓存 **30 分钟**（`$DSH_HOME/github-radar/trending-<period>.json`）
+- 某个搜索关键词：内存缓存 **5 分钟**
 
-The refresh button forces a fetch. If GitHub is unreachable, the last successful list keeps rendering with an `离线缓存` / `cached` badge instead of an empty panel.
+刷新按钮会强制重新拉取。GitHub 不可达时，最后一次成功的榜单会带「离线缓存」标记继续渲染，而不是变成一个空面板。
 
-## Architecture
+## 架构
 
 ```
-index.js          host   — GET /api/github-radar/trending?period=day|week|month|all
-                           GET /api/github-radar/search?q=<keywords>
-client.js         client — sidebar tab: four-period switcher, search box, list
+index.js          host   —— GET /api/github-radar/trending?period=day|week|month|all
+                            GET /api/github-radar/search?q=<keywords>
+client.js         client —— 右侧栏标签页：四档切换、搜索框、列表
 cordis.patch.yml  bundle patch
 ```
 
-Both routes are loopback-only and `GET`-only. Fetching from the browser would hit CORS and expose your proxy configuration to the page, which is why the outbound request lives on the host.
+两个路由都只监听回环地址，且只接受 `GET`。把请求放在浏览器里发会撞 CORS，还会把代理配置暴露给页面 —— 所以出站请求放在宿主端。
 
-## Permissions
+## 权限
 
-Declared capabilities: **network** only.
+声明的能力只有**网络**：
 
-- No filesystem writes outside `$DSH_HOME/github-radar/` (the cache)
-- No shell, no subprocess, no environment variable reads
-- No credentials, no tokens, no GitHub account
+- 除 `$DSH_HOME/github-radar/`（缓存目录）外不写文件
+- 不起 shell、不起子进程、不读环境变量
+- 不碰凭据、不碰 token、不碰 GitHub 账号
 
-## Requirements
+## 环境要求
 
-- DeepSeek Harness 0.2.0 line or newer
-- Windows, macOS or Linux (host half uses Node built-ins only)
+- DeepSeek Harness 0.2.0 及以后
+- Windows / macOS / Linux（宿主端只用 Node 内置模块）
 
-## Known limits
+## 已知限制
 
-- 30 entries per list, 30 search results. No "load more".
-- Descriptions are shown as GitHub returns them — mostly English. No translation.
-- The Today list depends on repositories being created *and* already gaining stars within 2 days; on quiet days it can be thin.
-- Search results are sorted by stars, so a precise match with few stars can sit below a popular near-match. That is GitHub's ranking, not a filter.
-- Star counts are a point-in-time snapshot, cached up to 30 minutes.
-- Hitting refresh repeatedly can exhaust the 10/minute unauthenticated quota; GitHub then answers 403 until the window resets. The cache usually prevents this.
+- 每个榜单 30 条，搜索 30 条，没有"加载更多"。
+- 描述按 GitHub 原样显示，以英文为主，不做翻译。
+- 「今日」榜要求仓库 2 天内**既新建又已经涨星**，冷清的时候会比较薄。
+- 搜索结果按星数排序，所以一个精确匹配但星数很少的仓库，可能排在热门的近似匹配下面 —— 这是 GitHub 的排序，不是过滤。
+- 星数是某一时刻的快照，最长可能已缓存 30 分钟。
+- 反复点刷新可能用完每分钟 10 次的匿名额度，GitHub 会返回 403 直到窗口重置；正常情况下缓存会挡住这种用法。
 
-## License
+## 许可证
 
-MIT — see [LICENSE](LICENSE).
+MIT —— 见 [LICENSE](LICENSE)。
